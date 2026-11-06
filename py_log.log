@@ -1,0 +1,4 @@
+INFO (06/11/2026 22:30:12): Бот запущен(Line: 31) [main.py]
+ERROR (06/11/2026 22:33:01): Failed to fetch updates - TelegramNetworkError: HTTP Client says - ServerDisconnectedError: Server disconnected(Line: 226) [dispatcher.py]
+WARNING (06/11/2026 22:33:01): Sleep for 1.000000 seconds and try again... (tryings = 0, bot id = 9075329761)(Line: 228) [dispatcher.py]
+INFO (06/11/2026 22:33:01): Бот выключен(Line: 40) [main.py]
