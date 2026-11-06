@@ -3,8 +3,8 @@ from datetime import timezone
 from aiogram import Bot, Router
 from aiogram.filters import CommandStart
 from aiogram.types import Message
-from app.utils import build_admin_text, send_greeting
 
+from app.utils import build_admin_text, send_greeting
 from config import settings
 
 router = Router()

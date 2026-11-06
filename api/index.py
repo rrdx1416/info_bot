@@ -1,37 +1,48 @@
-import json
 import os
-import urllib.request
-from http.server import BaseHTTPRequestHandler
+import sys
+from aiogram import Bot, Dispatcher
+from aiogram.types import Update
+from fastapi import FastAPI, HTTPException, Request
 
-TOKEN = os.environ["BOT_TOKEN"]
-API = f"https://api.telegram.org/bot{TOKEN}"
-REPLY = "Ваш текст сообщения"
+from app.handlers import router
+from config import settings
 
-
-def tg(method, data):
-    req = urllib.request.Request(
-        f"{API}/{method}",
-        data=json.dumps(data).encode(),
-        headers={"Content-Type": "application/json"},
-    )
-    return urllib.request.urlopen(req).read()
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
-class handler(BaseHTTPRequestHandler):
-    # Открываете https://ВАШ-ПРОЕКТ.vercel.app/api/
-    # в браузере, и webhook ставится
-    def do_GET(self):
-        host = self.headers["Host"]
-        res = tg("setWebhook", {"url": f"https://{host}/api/"})
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(res)
+SECRET = os.getenv("WEBHOOK_SECRET", "")
 
-    def do_POST(self):
-        body = self.rfile.read(int(self.headers["Content-Length"]))
-        update = json.loads(body)
-        msg = update.get("message")
-        if msg:
-            tg("sendMessage", {"chat_id": msg["chat"]["id"], "text": REPLY})
-        self.send_response(200)
-        self.end_headers()
+dp = Dispatcher()
+dp.include_router(router)
+
+app = FastAPI()
+
+
+@app.post("/api/webhook")
+async def webhook(request: Request):
+    if (
+        SECRET
+        and request.headers.get("x-telegram-bot-api-secret-token") != SECRET
+    ):
+        raise HTTPException(status_code=403)
+
+    bot = Bot(settings.bot_token)
+    try:
+        update = Update.model_validate(
+            await request.json(), context={"bot": bot}
+        )
+        await dp.feed_update(bot, update)
+    finally:
+        await bot.session.close()
+    return {"ok": True}
+
+
+@app.get("/api/set-webhook")
+async def set_webhook(request: Request):
+    bot = Bot(settings.bot_token)
+    try:
+        url = f"https://{request.headers['host']}/api/webhook"
+        ok = await bot.set_webhook(url, secret_token=SECRET or None)
+    finally:
+        await bot.session.close()
+    return {"ok": ok, "url": url}
